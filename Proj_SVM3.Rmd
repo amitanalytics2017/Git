@@ -1,0 +1,118 @@
+---
+title: "SVM"
+author: "Amit k singh"
+date: "24 September 2017"
+output: html_document
+---
+```{r}
+#SVM Project
+getwd()
+#use Library
+library("e1071")
+library("mosaic")
+library(VIM)
+#import Required CSv
+train<-read.csv("Train_data.csv")
+test<-read.csv("Validate_data.csv")
+gene<-read.csv("Test_data.csv")
+View(gene)
+#remove first coloumn
+train<-train[-1]
+test<-test[-1]
+gene<-gene[-1]
+#Restore datasets
+orig_TR<-train
+orig_tes<-test
+orig_gene<-gene
+#inspect Dataset
+inspect(train)
+inspect(test)
+inspect(gene)
+#to count NA
+table(is.na(train))
+train<-kNN(train)
+test<-kNN(test)
+gene<-kNN(gene)
+train$Married<-orig_TR$Married
+#to remove Blank with NA value
+train$Married[train$Married==""]<-"Yes"
+#To merge 3 Levels to 2 Levels by replacing"" by "Yes"
+levels(train$Married)<-c("Yes","No","Yes")
+#remove KNN tables
+train<-train[,1:12]
+test<-test[,1:12]
+gene<-gene[,1:11]
+View(train)
+View(test)
+View(gene)
+#factor
+train$Loan_Status<-as.factor(train$Loan_Status)
+test$outcome<-as.factor(test$outcome)
+svmmod<-svm(Loan_Status~.,train)
+summary(svmmod)
+pred<-predict(svmmod,test)
+pred
+table(pred)
+table(test$outcome)
+tab<-table(Actual=test$outcome,predict=pred)
+tab
+#Accuracy
+acuracy<-sum(diag(tab))/sum(tab)
+acuracy
+#Misclassification
+1-sum(diag(tab))/sum(tab)
+#plot
+plot.new()
+plot(test$outcome,pred,col="red",pch=3,xlab="Actual Variable",ylab="Predicted")
+#Tune the Model so that best Model can be used
+svm_tune <- tune.svm(Loan_Status~.,data = train,gamma=2^(1:2),cost=2^(3:4))
+print(svm_tune)
+#Best Performance is denotes the MSE:0.311.corresponding RMSE is Sqrt(0.3082003): 0.55
+#Rebuild Model with best parameter from SVm_tune
+svmmodn<-svm(Loan_Status~.,train,gamma=4,cost=16)
+summary(svmmodn)
+#instead of best parameter lets SvM best model to be picked Automatically
+best_mod<-svm_tune$best.model
+best_mod_pred<-predict(best_mod,test)
+tab<-table(Ac_val=test$outcome,Predicted=best_mod_pred)
+#best model accuracy
+accu<-sum(diag(tab))/sum(tab)
+accu
+#best model accuracy 77%
+#mISCLASSIFICATION
+1-accu
+#please note when you have done logistic regression accuracy comes as 94% which is matchig with simple 
+#SVM model but post tuning model accuracy comes as 77%.
+plot(svm_tune)
+#Now generate Outcomes in gene table by addidng outcome
+rese<-predict(best_mod,test,type="response")
+rese
+as.factor(gene$outcome)
+gene$outcome<-rese
+table(gene$outcome,rese)
+write.csv(gene,"gene_svm.csv")
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

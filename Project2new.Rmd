@@ -1,0 +1,149 @@
+---
+title: "Project"
+author: "Amit k singh"
+date: "19 September 2017"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r}
+#import data 
+library(readr)
+training <- read_csv("D:/R Working Directory/R_Module_Day_7.2_Credit_Risk_Train_data (1).csv")
+testing <- read_csv("D:/R Working Directory/R_Module_Day_8.2_Credit_Risk_Validate_data (1).csv")
+gen <- read_csv("D:/R Working Directory/R_Module_Day_8.1_Credit_Risk_Test_data (1).csv")
+#Restore Original
+origtr<-training
+origtes<-testing
+origgen<-gen
+# remove first variable as it has no significance
+training<-training[-1]
+testing<-testing[-1]
+gen<-gen[-1]
+View(training)
+# describe training Dataset
+dim(training)
+str(training)
+summary(training)
+#check NA for every variable
+table(is.na(training$Gender)) # 13 NA
+table(is.na(training$Married))# 3 NA
+table(is.na(training$Dependents)) # 15 NA
+table(is.na(training$Education))
+table(is.na(training$Self_Employed)) # 32 
+table(is.na(training$ApplicantIncome))
+table(is.na(training$CoapplicantIncome))
+table(is.na(training$LoanAmount)) #22 NA
+table(is.na(training$Loan_Amount_Term)) #14
+table(is.na(training$Credit_History)) #50
+table(is.na(training$Property_Area))
+table(is.na(training$Loan_Status))
+table(training$Credit_History)
+table(is.na(training)) #  NA in training Dataset
+table(is.na(testing)) #84 NA
+table(is.na(gen)) # 84 NA
+#clearing NA with Mode(highest occurence value-group1
+training$Gender[is.na(training$Gender)]<-'Male'
+training$Dependents[is.na(training$Dependents)]<-0
+training$Self_Employed[is.na(training$Self_Employed)]<-'No'
+training$Credit_History[is.na(training$Credit_History)]<-1
+training$Loan_Amount_Term[is.na(training$Loan_Amount_Term)]<-360
+training$Married[is.na(training$Married)]
+# Assigned Median value to numerical one
+training$LoanAmount[is.na(training$LoanAmount)]<-median(training$LoanAmount[!is.na(training$LoanAmount)])
+#change it to Categorical variable by converting to factor
+training$Loan_Status<-as.factor(training$Loan_Status)
+#model<-glm(Loan_Status~Married+Dependents+Credit_History+Property_Area,data=training,family = binomial)
+model<-glm(Loan_Status~.,training,family = binomial)
+summary(model)
+#optimized model
+#model<-glm(Loan_Status~.-ApplicantIncome-CoapplicantIncome-Self_Employed,training,family = binomial)
+#original model is working well AIC is low
+#model1<-glm(Loan_Status~Married+LoanAmount+Credit_History+Property_Area,training,family = binomial)
+summary(model)
+#now test 
+res<-predict(model,testing,type = "response")
+table(actualval=testing$outcome,predictedvalue=res>0.5)
+#this model is 94% accuratetly predicting value : (227+45)/(45+15+2+227)
+#Conclusion even though AIC value is hight Model prediction is 94% which is quite good.
+#Based on above model please predict the outcome for test dataset.
+rese<-predict(model,gen,type = "response")
+gen$outcome<-rese>0.5
+
+#Option-2 using KNN imputation
+#First Restore it to original
+training<-origtr
+table(is.na(training))  
+# 149 Missing Value Restored
+#using KNN Imputation
+library(VIM)
+training<-kNN(training)
+# KNN added few variables post its caculation
+summary(training)
+# to remove unwanted Variable
+training<-training[,2:13]
+#change it to Categorical variable by converting to factor
+training$Loan_Status<-as.factor(training$Loan_Status)
+#model<-glm(Loan_Status~Married+Dependents+Credit_History+Property_Area,data=training,family = binomial)
+model<-glm(Loan_Status~.,training,family = binomial)
+summary(model)
+#optimized model
+#model<-glm(Loan_Status~.-ApplicantIncome-CoapplicantIncome-Self_Employed,training,family = binomial)
+#original model is working well AIC is low
+#model1<-glm(Loan_Status~Married+LoanAmount+Credit_History+Property_Area,training,family = binomial)
+#now test 
+res<-predict(model,testing,type = "response")
+hist(res)
+#maximum value is landing above 0.7 to 0.9
+head(res)
+head(testing$outcome)
+tab<-table(actualval=testing$outcome,predictedvalue=res>0.5)
+tab
+#calculate Accuracy
+sum(diag(tab))/sum(tab)# 94%
+#Misclassification accuracy
+1-sum(diag(tab))/sum(tab) #5%
+#model performance Evaluation
+library(ROCR)
+table(testing$outcome)
+res<-predict(model,testing,type ='response')
+pred<-prediction(res,testing$outcome)
+eval<-performance(pred,"acc")
+plot(eval)
+#receiver Operating characteristics
+roc<-performance(pred,"tpr","fpr")
+plot(roc,colorize=T)
+abline(a=0,b=1)
+#Note As per Data set Testing 290 Application granted loan out of processed 367 application,79% Applicant got loan however my model accuracy is coming as 94% which is greater than 79% actual.
+#this model is 94% accuratetly predicting value : (227+45)/(45+15+2+227)
+#Conclusion even though AIC value is hight Model prediction is 94% which is quite good.
+#Based on above model please predict the outcome for test dataset.
+rese<-predict(model,gen,type = "response")
+gen$outcome<-rese>0.5
+write.csv(gen,"gen_log.csv")
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
